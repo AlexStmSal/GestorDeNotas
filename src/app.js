@@ -2,14 +2,19 @@
 
 /** @typedef {{ id:string, texto:string, fecha:string, prioridad:number, completada?:boolean }} Nota */
 
+//Se inicializa el estado global en un objeto
 const estado = {
   notas: /** @type {Nota[]} */ ([]),
   filtro: obtenerFiltroDesdeHash()
 };
 
+//Espera a que el DOM esté listo(elementos ya creados) y registra eventos de la interfaz
 document.addEventListener("DOMContentLoaded", () => {
+  //Entra en el nav y selecciona todos los elementos que tengan atributo data-hash
   document.querySelectorAll("nav [data-hash]").forEach(btn => {
-    btn.addEventListener("click", () => { location.hash = btn.getAttribute("data-hash"); });
+    btn.addEventListener("click", () => { 
+      //Selecciona con el boton y asigna el atributo del boton pulsado
+      location.hash = btn.getAttribute("data-hash"); });
   });
   document.getElementById("formNota").addEventListener("submit", onSubmitNota);
   document.getElementById("btnPanelDiario").addEventListener("click", abrirPanelDiario);
@@ -28,6 +33,7 @@ function crearNota(texto, fecha, prioridad) {
   if (!t || Number.isNaN(f.getTime())) throw new Error("Datos de nota inválidos");
   return { id: "n" + Math.random().toString(36).slice(2), texto: t, fecha: f.toISOString().slice(0,10), prioridad: p };
 }
+
 
 function obtenerFiltroDesdeHash() {
   const h = (location.hash || "#todas").toLowerCase();
