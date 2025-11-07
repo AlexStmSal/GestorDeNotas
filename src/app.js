@@ -2,14 +2,16 @@
 
 /** @typedef {{ id:string, texto:string, fecha:string, prioridad:number, completada?:boolean }} Nota */
 
-//Se inicializa el estado global en un objeto.
+//Se inicializa el estado global en un objeto
 const estado = {
   notas: /** @type {Nota[]} */ ([]),
   filtro: obtenerFiltroDesdeHash(), //Se inicializa leyendo el hash actual con obtenerFiltro...()
 };
 
-//Espera a que el DOM esté listo(elementos ya creados) y registra eventos de la interfaz.
-//Render muestra el estado inicial
+/**
+ * Iniciación del DOM: Espera a que esté listo (elementos ya creados) y registra eventos de la interfaz.
+ * Render muestra el estado inicial
+ */
 document.addEventListener("DOMContentLoaded", () => {
   //Entra en el nav y selecciona todos los elementos que tengan atributo data-hash
   document.querySelectorAll("nav [data-hash]").forEach((btn) => {
@@ -22,19 +24,28 @@ document.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("btnPanelDiario")
     .addEventListener("click", abrirPanelDiario);
+
+  //La pagina mantiene el ultimo filtro activo si se recarga
+  const filtroGuardado = localStorage.getItem("filtro");
+  if (filtroGuardado) location.hash = filtroGuardado;
+
+  cargarNotas(); //Cargar notas desde localStorage
   render();
 });
 
-//Actualiza el filtro y vuelve a renderizar las notas segun URL actual
+/**
+ * Actualiza el filtro, lo guarda en localStorage y renderiza las notas segun URL actual
+ */
 window.addEventListener("hashchange", () => {
   estado.filtro = obtenerFiltroDesdeHash();
+  localStorage.setItem("filtro", estado.filtro);
   render();
 });
 
 /**
  * Crea una nota a partir del texto, una fecha y una prioridad.
  * @param {string} texto Texto de la nota. Se recorta con trim() y se valida que no este vacio.
- * @param {date} fecha  Fecha asociada. Se convierte en obj Date y luego a formato ISO(yyyy-mm-dd).
+ * @param {Date} fecha  Fecha asociada. Se convierte en obj Date y luego a formato ISO(yyyy-mm-dd).
  * @param {number} prioridad Nivel de prioridad(1=baja, 2=media, 3=alta). Se normaliza rango 1-3.
  * @returns {Nota} Nueva nota con ID unico, texto, fecha y prioridad validos.
  * @throws {Error} Si el texto esta vacio o la fecha no es valida.
@@ -150,7 +161,7 @@ function render() {
 /**
  * Formatea una fecha a formato legible segun el idioma del navegador.
  * @param {string|number|Date} ymd Fecha en formato ISO
- * @returns {returns} Fecha formateada segun la config regional del usuario
+ * @returns {string} Fecha formateada segun la config regional del usuario
  */
 function formatearFecha(ymd) {
   const d = new Date(ymd);
@@ -177,6 +188,7 @@ function onSubmitNota(e) {
   try {
     const nota = crearNota(texto, fecha, prioridad); //CrearNota para validar y crear una nota
     estado.notas.push(nota); //Agrega notas al estado global
+    guardarNotas(); //Guardamos en localStorage
     e.target.reset(); //limpia el form
     alert("Nota creada"); //Aviso de confirmacion
     render(); //Actualiar lista
@@ -209,6 +221,8 @@ function onAccionNota(e) {
   //Si es completar, completada = true
   if (acc === "completar") estado.notas[idx].completada = true;
 
+  //Guardar en localStorage
+  guardarNotas();
   //Actualiza vista
   render();
 }
@@ -228,7 +242,7 @@ function abrirPanelDiario() {
     alert("Pop-up bloqueado. Permita ventanas emergentes.");
     return;
   }
-  // Crea una "instantánea" del estado actual de las notas (objeto con tipo y datos)
+  //Crea una "instantánea" del estado actual de las notas (objeto con tipo y datos)
   const snapshot = { tipo: "SNAPSHOT", notas: filtrarNotas(estado.notas) };
   //Despues de un retardo de 400ms, envia la snapshot a panel.html con postMessage
   setTimeout(() => {
@@ -267,4 +281,67 @@ function escapeHtml(s) {
         c
       ])
   );
+}
+
+//PERSISTENCIA LOCAL
+/**
+ * Guarda el estado actual de las notas en localStorage.
+ * Convierte el array de obj a JSON antes de almacenarlo.
+ * @returns {void}
+ */
+function guardarNotas() {
+  try {
+    const datos = JSON.stringify(estado.notas);
+    localStorage.setItem("notas", datos); //Conversion a json
+  } catch (err) {
+    console.error("Error al guardar notas: ", err);
+  }
+}
+
+/**
+ * Carga notas almacenadas en localStorage (si existen).
+ * Intenta convertir el json guardado en un arr de obj Nota.
+ * Si no hay datos validos, devuelve arr vacio
+ * @returns {void}
+ */
+function cargarNotas() {
+  try {
+    const datos = localStorage.getItem("notas");
+    if (datos) {
+      estado.notas = JSON.parse(datos);
+    }
+  } catch (err) {
+    console.warn("Error al cargar notas, array vacío por defecto", err);
+    estado.notas = [];
+  }
+}
+
+/**
+ * Guarda una cookie simple con nombre y valor durante x dias.
+ * @param {string} nombre
+ * @param {string} valor
+ * @param {number} dias
+ */
+function setCookie(nombre, valor, dias) {
+  const fecha = new Date();
+  fecha.setTime(fecha.getTime() + dias * 24 * 60 * 60 * 1000);
+  document.cookie = `${nombre}=${encodeURIComponent(
+    valor
+  )}; expires=${fecha.toUTCString()}; path=/`;
+}
+
+/**
+ * Recupera una cookie por nombre.
+ * @param {string} nombre
+ */
+function getCookie(nombre) {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${nombre}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+/**
+ * Guarda el idioma del navegador en una cookie.
+ */
+function guardarIdioma() {
+  setCookie("idioma", navigator.language);
 }
