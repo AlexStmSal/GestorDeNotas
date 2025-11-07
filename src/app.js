@@ -345,3 +345,18 @@ function getCookie(nombre) {
 function guardarIdioma() {
   setCookie("idioma", navigator.language);
 }
+
+/**
+ * Elimima todas las notas guardadas, cambia el arr notas a uno vacio y renderiza nueva vista.
+ * @returns {void}
+ */
+function limpiarDatos() {
+  if (confirm("¿Eliminar todas las notas guardadas?")) {
+    localStorage.removeItem("notas");
+    estado.notas = [];
+    render();
+  }
+}
+
+//Evento limpiarDatos
+document.getElementById("btnLimpiar").addEventListener("click", limpiarDatos);
