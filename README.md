@@ -15,7 +15,7 @@
 
 ## Matriz RA–CE (referenciar funciones/flujo)
 
-- Objetos nativos → Math, String, Date, Number
+- Objetos nativos → Math, String, Date, Number, Array
 - Interacción navegador (`navigator`, `location.hash`) → …
 - Ventanas y comunicación → …
 - Persistencia → LocalStorage para almacenar datos en JSON y cookies para almacenamiento de datos simples.

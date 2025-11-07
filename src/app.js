@@ -125,7 +125,8 @@ function ordenarNotas(notas) {
  * - Limpia el contenedor principal (#listaNotas).
  * - Filtra y ordena las notas actuales segun el estado global.
  * - Crea elementos article con encabezado, fecha y botones de accion.
- * - Asocia los eventos de los botones (completar y borrar) a cada nota.
+ * - Muestra visualmente las completadas con la clase .completada.
+ * - Asocia los eventos de los botones (completar, descompletar y borrar) a cada nota.
  *  @returns {void}
  */
 function render() {
@@ -135,17 +136,25 @@ function render() {
 
   //Obtiene las notas filtradas y ordenadas
   const visibles = ordenarNotas(filtrarNotas(estado.notas));
+
   //Crea dinamicamente un article por cada nota visible
   for (const n of visibles) {
     const card = document.createElement("article");
-    card.className = "nota";
+    //Añade clase nota y completada si es true
+    card.className = "nota" + (n.completada ? " completada" : "");
+
+    //Determina el boton principal segun el estado de la nota
+    const btnAccion = n.completada
+      ? `<button data-acc="descompletar" data-id="${n.id}">Desmarcar</button>`
+      : `<button data-acc="completar" data-id="${n.id}">Completar</button>`;
+
     card.innerHTML = `
       <header>
         <strong>[P${n.prioridad}] ${escapeHtml(n.texto)}</strong>
         <time datetime="${n.fecha}">${formatearFecha(n.fecha)}</time>
       </header>
       <footer>
-        <button data-acc="completar" data-id="${n.id}">Completar</button>
+        ${btnAccion}
         <button data-acc="borrar" data-id="${n.id}">Borrar</button>
       </footer>
     `;
@@ -209,17 +218,22 @@ function onSubmitNota(e) {
 function onAccionNota(e) {
   const btn = e.currentTarget;
   const id = btn.getAttribute("data-id"); //Identifica que nota es
-  const acc = btn.getAttribute("data-acc"); //Accion 'borrar' o 'completar'
+  const acc = btn.getAttribute("data-acc"); //Accion 'borrar', 'completar' o 'descompletar'
 
   const idx = estado.notas.findIndex((n) => n.id === id); //Busca la nota correspondiente en estado.notas
   if (idx < 0) return; //Si no encuentra la nota correspondoente al boton pulsado, sale
 
   //si es borrar, pide confirmacion y la borra
-  if (acc === "borrar" && confirm("¿Borrar la nota?"))
+  if (acc === "borrar" && confirm("¿Borrar la nota?")) {
     estado.notas.splice(idx, 1);
+  }
 
   //Si es completar, completada = true
-  if (acc === "completar") estado.notas[idx].completada = true;
+  if (acc === "completar") {
+    estado.notas[idx].completada = true;
+  } else if (acc === "descompletar") {
+    estado.notas[idx].completada = false;
+  }
 
   //Guardar en localStorage
   guardarNotas();

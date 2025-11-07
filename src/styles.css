@@ -1,9 +1,46 @@
-:root { --font: system-ui, sans-serif; }
-* { box-sizing: border-box; }
-body { font-family: var(--font); margin: 0; line-height: 1.5; }
-header, footer { padding: 1rem; background: #f2f2f2; }
-main { padding: 1rem; }
-nav button { margin-right: .5rem; }
-#listaNotas { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
-.nota { border: 1px solid #ddd; border-radius: 8px; padding: .75rem; }
-.nota header { display: flex; justify-content: space-between; align-items: center; }
+:root {
+  --font: system-ui, sans-serif;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  font-family: var(--font);
+  margin: 0;
+  line-height: 1.5;
+}
+header,
+footer {
+  padding: 1rem;
+  background: #f2f2f2;
+}
+main {
+  padding: 1rem;
+}
+nav button {
+  margin-right: 0.5rem;
+}
+#listaNotas {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.nota {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+.nota header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Estilo para notas completadas */
+.nota.completada {
+  opacity: 0.6;
+}
+
+.nota.completada strong {
+  text-decoration: line-through;
+}
