@@ -24,6 +24,10 @@ document.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("btnPanelDiario")
     .addEventListener("click", abrirPanelDiario);
+  //add
+  document
+    .getElementById("btnFullscreen")
+    .addEventListener("click", alternarPantallaCompleta);
 
   //La pagina mantiene el ultimo filtro activo si se recarga
   const filtroGuardado = localStorage.getItem("filtro");
@@ -57,6 +61,32 @@ function crearNota(texto, fecha, prioridad) {
   const f = new Date(fecha);
   if (!t || Number.isNaN(f.getTime()))
     throw new Error("Datos de nota inválidos");
+
+  const anio = f.getFullYear();
+  const anioActual = new Date().getFullYear();
+
+  // Validar que el año tenga 4 dígitos
+  if (fecha.split("-")[0].length !== 4) {
+    throw new Error("El año debe tener 4 dígitos (por ejemplo, 2025)");
+  }
+
+  // Validar rango de años permitido (desde el actual hasta 2 años después)
+  if (anio < anioActual) {
+    throw new Error(`La fecha no puede ser anterior a ${anioActual}`);
+  }
+  if (anio > anioActual + 2) {
+    throw new Error(
+      `Solo se permiten recordatorios hasta el año ${anioActual + 2}`
+    );
+  }
+
+  // Validar que la fecha no sea anterior a hoy
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  if (f < hoy) {
+    throw new Error("La fecha no puede ser anterior a hoy");
+  }
+
   return {
     id: "n" + Math.random().toString(36).slice(2),
     texto: t,
@@ -142,7 +172,9 @@ function render() {
   for (const n of visibles) {
     const card = document.createElement("article");
     //Añade clase nota y completada si es true
-    card.className = "nota" + (n.completada ? " completada" : "");
+    card.className = `nota prioridad-${n.prioridad} ${
+      n.completada ? "completada" : ""
+    }`; //Modificamos esta línea para que el css le de color segun prioridad o tache si completa
 
     //Determina el boton principal segun el estado de la nota
     const btnAccion = n.completada
@@ -200,8 +232,12 @@ function onSubmitNota(e) {
     estado.notas.push(nota); //Agrega notas al estado global
     guardarNotas(); //Guardamos en localStorage
     e.target.reset(); //limpia el form
-    alert("Nota creada"); //Aviso de confirmacion
+    mostrarMensaje("Nota creada correctamente", "ok");
     render(); //Actualiar lista
+    // Desplazar al área de notas
+    document.getElementById("listTitle").scrollIntoView({ behavior: "smooth" });
+    // Mostrar mensaje visual
+    mostrarMensaje("Nota creada correctamente", "ok");
   } catch (err) {
     alert(err.message);
   }
@@ -224,16 +260,20 @@ function onAccionNota(e) {
   const idx = estado.notas.findIndex((n) => n.id === id); //Busca la nota correspondiente en estado.notas
   if (idx < 0) return; //Si no encuentra la nota correspondoente al boton pulsado, sale
 
-  //si es borrar, pide confirmacion y la borra
-  if (acc === "borrar" && confirm("¿Borrar la nota?")) {
-    estado.notas.splice(idx, 1);
+  if (acc === "borrar") {
+    //si es borrar, pide confirmacion y la borra
+    if (confirm("¿Seguro que quieres borrar la nota?")) {
+      estado.notas.splice(idx, 1);
+      mostrarMensaje("Nota borrada", "ok");
+    }
   }
-
-  //Si es completar, completada = true
   if (acc === "completar") {
+    //Si es completar, completada = true
     estado.notas[idx].completada = true;
+    mostrarMensaje("Nota marcada como completada", "ok");
   } else if (acc === "descompletar") {
     estado.notas[idx].completada = false;
+    mostrarMensaje("Nota desmarcada");
   }
 
   //Guardar en localStorage
@@ -356,3 +396,76 @@ function limpiarDatos() {
 
 //Evento limpiarDatos
 document.getElementById("btnLimpiar").addEventListener("click", limpiarDatos);
+
+//EVENTOS DE PANTALLA
+/**
+ *
+ */
+function alternarPantallaCompleta() {
+  if (!document.fullscreenElement) {
+    document.documentElement
+      .requestFullscreen()
+      .catch(() =>
+        mostrarMensaje("No se puede activar pantalla completa", "error")
+      );
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+/**
+ * Muestra en consola el tamaño actual del viewport (ancho x alto).
+ * Se ejecuta cada vez que el usuario redimensiona la ventana.
+ * @returns
+ * // Al cambiar el tamaño de la ventana:
+ * // "Viewport actual: 1366x768"
+ */
+function mostrarTamanoViewport() {
+  const ancho = window.innerWidth;
+  const alto = window.innerHeight;
+  console.log(`Viewport actual: ${ancho}x${alto}`);
+}
+window.addEventListener("resize", mostrarTamanoViewport);
+window.addEventListener("hashchange", () => {
+  //add
+  estado.filtro = obtenerFiltroDesdeHash();
+  render();
+});
+
+/**
+ * Muestra un mensaje visual temporal en la esquina inferior derecha.
+ *
+ * - Crea el contenedor si no existe.
+ * - Cambia el color según el tipo de mensaje.
+ * - Se desvanece automáticamente tras unos segundos.
+ *
+ * @param {string} texto - Texto del mensaje que se mostrará al usuario.
+ * @param {"info"|"ok"|"error"} [tipo="info"] - Tipo de mensaje:
+ *   - `"ok"` → Verde (éxito)
+ *   - `"error"` → Rojo (error)
+ *   - `"info"` → Verde por defecto
+ *
+ * @example
+ * mostrarMensaje("Nota creada correctamente", "ok");
+ * mostrarMensaje("Error al crear la nota", "error");
+ */
+function mostrarMensaje(texto, tipo = "info") {
+  let caja = document.getElementById("mensaje");
+  if (!caja) {
+    caja = document.createElement("div");
+    caja.id = "mensaje";
+    caja.style.position = "fixed";
+    caja.style.bottom = "10px";
+    caja.style.right = "10px";
+    caja.style.padding = "10px 15px";
+    caja.style.borderRadius = "8px";
+    caja.style.color = "white";
+    caja.style.fontWeight = "bold";
+    caja.style.transition = "opacity 0.5s";
+    document.body.appendChild(caja);
+  }
+  caja.textContent = texto;
+  caja.style.backgroundColor = tipo === "error" ? "crimson" : "seagreen";
+  caja.style.opacity = "1";
+  setTimeout(() => (caja.style.opacity = "0"), 2000);
+}
