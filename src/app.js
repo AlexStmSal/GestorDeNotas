@@ -29,6 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const filtroGuardado = localStorage.getItem("filtro");
   if (filtroGuardado) location.hash = filtroGuardado;
 
+  guardarIdioma(); //Guardar idioma en una cookie
   cargarNotas(); //Cargar notas desde localStorage
   render();
 });
@@ -331,33 +332,14 @@ function cargarNotas() {
 }
 
 /**
- * Guarda una cookie simple con nombre y valor durante x dias.
- * @param {string} nombre
- * @param {string} valor
- * @param {number} dias
+ * Guarda el idioma del navegador en una cookie por 30 dias
  */
-function setCookie(nombre, valor, dias) {
+function guardarIdioma(dias = 30) {
   const fecha = new Date();
   fecha.setTime(fecha.getTime() + dias * 24 * 60 * 60 * 1000);
-  document.cookie = `${nombre}=${encodeURIComponent(
-    valor
+  document.cookie = `idioma=${encodeURIComponent(
+    navigator.language
   )}; expires=${fecha.toUTCString()}; path=/`;
-}
-
-/**
- * Recupera una cookie por nombre.
- * @param {string} nombre
- */
-function getCookie(nombre) {
-  const match = document.cookie.match(new RegExp(`(?:^|; )${nombre}=([^;]*)`));
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
-/**
- * Guarda el idioma del navegador en una cookie.
- */
-function guardarIdioma() {
-  setCookie("idioma", navigator.language);
 }
 
 /**
