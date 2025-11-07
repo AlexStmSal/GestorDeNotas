@@ -1,4 +1,4 @@
-# NotasApp — DWEC U3 (Plantilla mínima)
+# NotasApp — DWEC U3 
 
 **Objetivo**: implementar los RF acordados (objetos nativos; `navigator.language`; filtros por `location.hash`; generación de HTML; viewport/scroll/pantalla completa cuando proceda; `window.open`+comunicación controlada; persistencia elegida y justificada; depuración/documentación).
 
