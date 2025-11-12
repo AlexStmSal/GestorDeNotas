@@ -8,7 +8,7 @@
 2. Completar la lógica según los RF (ver enunciado de la UD).
 3. Añadir evidencias de depuración (capturas) en este README o en la carpeta que decidas.
 
-## Justificación de persistencia (rellenar)
+## Justificación de persistencia
 
 - Mecanismo elegido: Cookies ✔ / Web Storage - LocalStorage ✔
 - Motivo: Cookies para datos sencillos como el idioma del navegador. Con una expiración de 30 días.
