@@ -1,4 +1,4 @@
-// DWEC U3 — Gestor de notas
+// DWEC U3 — Gestor de notas PLUS
 
 /** @typedef {{ id:string, texto:string, fecha:string, prioridad:number, completada?:boolean }} Nota */
 
@@ -8,11 +8,17 @@ const estado = {
   filtro: obtenerFiltroDesdeHash(), //Se inicializa leyendo el hash actual con obtenerFiltro...()
 };
 
+//1. INICIACIÓN DEL DOM:
+
 /**
- * Iniciación del DOM: Espera a que esté listo (elementos ya creados) y registra eventos de la interfaz.
- * Render muestra el estado inicial
+ * Espera a que esté listo (elementos ya creados) y registra eventos de la interfaz.
+ * Render muestra el estado inicial.
  */
 document.addEventListener("DOMContentLoaded", () => {
+  document
+    .getElementById("listaNotas")
+    .addEventListener("click", delegarAccionNota);
+
   //Entra en el nav y selecciona todos los elementos que tengan atributo data-hash
   document.querySelectorAll("nav [data-hash]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -20,11 +26,13 @@ document.addEventListener("DOMContentLoaded", () => {
       location.hash = btn.getAttribute("data-hash");
     });
   });
+  //
   document.getElementById("formNota").addEventListener("submit", onSubmitNota);
+  //Abrir panel diario
   document
     .getElementById("btnPanelDiario")
     .addEventListener("click", abrirPanelDiario);
-  //add
+  //Pantalla completa
   document
     .getElementById("btnFullscreen")
     .addEventListener("click", alternarPantallaCompleta);
@@ -47,18 +55,20 @@ window.addEventListener("hashchange", () => {
   render();
 });
 
+//2. GESTIÓN DE NOTAS (CRUD)
+
 /**
  * Crea una nota a partir del texto, una fecha y una prioridad.
  * @param {string} texto Texto de la nota. Se recorta con trim() y se valida que no este vacio.
  * @param {Date} fecha  Fecha asociada. Se convierte en obj Date y luego a formato ISO(yyyy-mm-dd).
  * @param {number} prioridad Nivel de prioridad(1=baja, 2=media, 3=alta). Se normaliza rango 1-3.
- * @returns {Nota} Nueva nota con ID unico, texto, fecha y prioridad validos.
+ * @returns {Nota} Nuevo obj Nota con ID unico, texto, fecha y prioridad validos.
  * @throws {Error} Si el texto esta vacio o la fecha no es valida.
  */
 function crearNota(texto, fecha, prioridad) {
-  const t = String(texto).trim();
-  const p = Math.max(1, Math.min(3, Number(prioridad) || 1));
-  const f = new Date(fecha);
+  const t = String(texto).trim(); //Texto
+  const f = new Date(fecha); //Fecha
+  const p = Math.max(1, Math.min(3, Number(prioridad) || 1)); //Prioridad
   if (!t || Number.isNaN(f.getTime()))
     throw new Error("Datos de nota inválidos");
 
@@ -87,6 +97,7 @@ function crearNota(texto, fecha, prioridad) {
     throw new Error("La fecha no puede ser anterior a hoy");
   }
 
+  //Objeto Nota
   return {
     id: "n" + Math.random().toString(36).slice(2),
     texto: t,
@@ -152,55 +163,6 @@ function ordenarNotas(notas) {
 }
 
 /**
- *Reconstruye dinamicamente la lista de notas en el DOM:
- * - Limpia el contenedor principal (#listaNotas).
- * - Filtra y ordena las notas actuales segun el estado global.
- * - Crea elementos article con encabezado, fecha y botones de accion.
- * - Muestra visualmente las completadas con la clase .completada.
- * - Asocia los eventos de los botones (completar, descompletar y borrar) a cada nota.
- *  @returns {void}
- */
-function render() {
-  //Recoge el contenedor principal
-  const cont = document.getElementById("listaNotas");
-  cont.innerHTML = ""; //Limpia el contenido previo
-
-  //Obtiene las notas filtradas y ordenadas
-  const visibles = ordenarNotas(filtrarNotas(estado.notas));
-
-  //Crea dinamicamente un article por cada nota visible
-  for (const n of visibles) {
-    const card = document.createElement("article");
-    //Añade clase nota y completada si es true
-    card.className = `nota prioridad-${n.prioridad} ${
-      n.completada ? "completada" : ""
-    }`; //Modificamos esta línea para que el css le de color segun prioridad o tache si completa
-
-    //Determina el boton principal segun el estado de la nota
-    const btnAccion = n.completada
-      ? `<button data-acc="descompletar" data-id="${n.id}">Desmarcar</button>`
-      : `<button data-acc="completar" data-id="${n.id}">Completar</button>`;
-
-    card.innerHTML = `
-      <header>
-        <strong>[P${n.prioridad}] ${escapeHtml(n.texto)}</strong>
-        <time datetime="${n.fecha}">${formatearFecha(n.fecha)}</time>
-      </header>
-      <footer>
-        ${btnAccion}
-        <button data-acc="borrar" data-id="${n.id}">Borrar</button>
-      </footer>
-    `;
-    cont.appendChild(card);
-  }
-
-  //Añade eventos a los botones dentro de las notas recien creadas
-  cont
-    .querySelectorAll("button[data-acc]")
-    .forEach((btn) => btn.addEventListener("click", onAccionNota));
-}
-
-/**
  * Formatea una fecha a formato legible segun el idioma del navegador.
  * @param {string|number|Date} ymd Fecha en formato ISO
  * @returns {string} Fecha formateada segun la config regional del usuario
@@ -244,36 +206,41 @@ function onSubmitNota(e) {
 }
 
 /**
- *Controla las acciones de cada nota (borrar o completar).
- * - Identifica la nota mediante data-id.
+ *Controla las acciones de cada nota (borrar, completar, marcar, desmarcar).
+ * - Identifica la nota mediante data-acc.
  * - Si la accion es borrar, solicita confirmacion y la elimina.
  * - Si es completar, marca la nota como completada.
+ * - Puede marcarse y desmarcarse.
  * - Siempre vuelve a renderizar la vista actual.
- * @param {MouseEvent} e Evento click en un boton de accion
- * @returns
+ * @param {click} e Evento click en un boton de accion
  */
-function onAccionNota(e) {
-  const btn = e.currentTarget;
-  const id = btn.getAttribute("data-id"); //Identifica que nota es
-  const acc = btn.getAttribute("data-acc"); //Accion 'borrar', 'completar' o 'descompletar'
+function delegarAccionNota(e) {
+  const btn = e.target.closest("button[data-acc]");
+  if (!btn) {
+    return;
+  }
 
-  const idx = estado.notas.findIndex((n) => n.id === id); //Busca la nota correspondiente en estado.notas
-  if (idx < 0) return; //Si no encuentra la nota correspondoente al boton pulsado, sale
+  const acc = btn.dataset.acc;
+  const id = btn.dataset.id;
+
+  const idx = estado.notas.findIndex((n) => n.id === id);
+  if (idx < 0) return;
 
   if (acc === "borrar") {
-    //si es borrar, pide confirmacion y la borra
-    if (confirm("¿Seguro que quieres borrar la nota?")) {
+    if (confirm("¿Desea borrar la nota?")) {
       estado.notas.splice(idx, 1);
       mostrarMensaje("Nota borrada", "ok");
     }
   }
+
   if (acc === "completar") {
-    //Si es completar, completada = true
     estado.notas[idx].completada = true;
     mostrarMensaje("Nota marcada como completada", "ok");
-  } else if (acc === "descompletar") {
+  }
+
+  if (acc === "descompletar") {
     estado.notas[idx].completada = false;
-    mostrarMensaje("Nota desmarcada");
+    mostrarMensaje("Nota desmarcada", "info");
   }
 
   //Guardar en localStorage
@@ -282,63 +249,8 @@ function onAccionNota(e) {
   render();
 }
 
-/**
- * Abre una ventana secundaria (panel diario) y le envia las notas actuales.
- * - Si es navegador bloquea la ventana, muestra una aviso.
- * - Envia un objeto 'snapshot' con las notas filtradas mediante postMessage().
- * - Usa un pequeño retardo para garantizar que el panel este cargado.
- * @returns {void}
- */
-function abrirPanelDiario() {
-  //Abre una ventana emergente panel.html
-  const ref = window.open("panel.html", "PanelDiario", "width=420,height=560");
-  //Si el navegador bloquea el popup, avisar
-  if (!ref) {
-    alert("Pop-up bloqueado. Permita ventanas emergentes.");
-    return;
-  }
-  //Crea una "instantánea" del estado actual de las notas (objeto con tipo y datos)
-  const snapshot = { tipo: "SNAPSHOT", notas: filtrarNotas(estado.notas) };
-  //Despues de un retardo de 400ms, envia la snapshot a panel.html con postMessage
-  setTimeout(() => {
-    try {
-      ref.postMessage(snapshot, "*");
-    } catch {}
-  }, 400);
-}
+//3. PERSISTENCIA LOCAL
 
-/**
- * Escucha mensajes entrantes desde panel.html.
- * - Si el mensaje indidca tipo 'borrado', elimina la nota con ese id.
- * - Actualiza el estado y vuelve a renderizar la lista.
- * @param {MessageEvent} ev Evento de mensaje recibido por postMessage().
- * @returns {void}
- */
-window.addEventListener("message", (ev) => {
-  if (!ev.data || typeof ev.data !== "object") return;
-  if (ev.data.tipo === "BORRADO") {
-    const id = ev.data.id;
-    estado.notas = estado.notas.filter((n) => n.id !== id);
-    render();
-  }
-});
-
-/**
- * Previene inyecciones de script o HTML al mostrar texto
- * @param {string} s Texto a mostrar
- * @returns {string} Texto seguro para insertar en innerHTML
- */
-function escapeHtml(s) {
-  return String(s).replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[
-        c
-      ])
-  );
-}
-
-//PERSISTENCIA LOCAL
 /**
  * Guarda el estado actual de las notas en localStorage.
  * Convierte el array de obj a JSON antes de almacenarlo.
@@ -397,7 +309,61 @@ function limpiarDatos() {
 //Evento limpiarDatos
 document.getElementById("btnLimpiar").addEventListener("click", limpiarDatos);
 
-//EVENTOS DE PANTALLA
+//4. RENDERIZADO
+
+function render() {
+  const cont = document.getElementById("listaNotas"); //Recoge el contenedor principal
+  cont.innerHTML = ""; //Limpia el contenido previo
+
+  const tpl = document.getElementById("nota-template"); //Seleccionar el template de nota
+
+  const fragment = document.createDocumentFragment(); //Crear fragmento (donde van las notas previo al DOM)
+
+  const visibles = ordenarNotas(filtrarNotas(estado.notas)); //Obtiene las notas filtradas y ordenadas
+
+  //Recorre las notas y usa template para completarlas
+  for (const n of visibles) {
+    const clone = tpl.content.cloneNode(true); //Clonar el template
+    const card = clone.querySelector(".nota"); //Seleccionar la clase .nota del template
+    card.classList.add(`prioridad-${n.prioridad}`); //Aplica clase segun prioridad. Añade, no sobreescribe
+    //Estado de la nota
+    if (n.completada) {
+      card.classList.add("completada");
+    }
+
+    //TEXTO
+    const textoNota = card.querySelector('[data-campo="texto"]');
+    textoNota.textContent = n.texto;
+
+    //FECHA
+    const fechaNota = card.querySelector('[data-campo="fecha"]');
+    fechaNota.textContent = formatearFecha(n.fecha);
+    fechaNota.setAttribute("datetime", n.fecha); //Valor ISO (accesibilidad)
+
+    //BTN COMPLETAR/DESCOMPLETAR
+    const btnAccion = card.querySelector('[data-acc="completar"]'); //Recoger btn
+
+    if (n.completada) {
+      btnAccion.textContent = "Desmarcar";
+      btnAccion.dataset.acc = "descompletar";
+    } else {
+      btnAccion.textContent = "Completar";
+      btnAccion.dataset.acc = "completar";
+    }
+
+    btnAccion.dataset.id = n.id;
+
+    //BTN BORRAR
+    const btnBorrar = card.querySelector('[data-acc="borrar"]');
+    btnBorrar.dataset.id = n.id;
+
+    fragment.appendChild(clone); //Insertar clone al fragment
+  }
+  //Insertar fragmento al DOM real
+  cont.appendChild(fragment);
+}
+
+//5. EVENTOS DE PANTALLA
 /**
  *
  */
@@ -431,6 +397,51 @@ window.addEventListener("hashchange", () => {
   estado.filtro = obtenerFiltroDesdeHash();
   render();
 });
+
+//6. COMUNICACIÓN ENTRE VENTANAS
+
+/**
+ * Abre una ventana secundaria (panel diario) y le envia las notas actuales.
+ * - Si es navegador bloquea la ventana, muestra una aviso.
+ * - Envia un objeto 'snapshot' con las notas filtradas mediante postMessage().
+ * - Usa un pequeño retardo para garantizar que el panel este cargado.
+ * @returns {void}
+ */
+function abrirPanelDiario() {
+  //Abre una ventana emergente panel.html
+  const ref = window.open("panel.html", "PanelDiario", "width=420,height=560");
+  //Si el navegador bloquea el popup, avisar
+  if (!ref) {
+    alert("Pop-up bloqueado. Permita ventanas emergentes.");
+    return;
+  }
+  //Crea una "instantánea" del estado actual de las notas (objeto con tipo y datos)
+  const snapshot = { tipo: "SNAPSHOT", notas: filtrarNotas(estado.notas) };
+  //Despues de un retardo de 400ms, envia la snapshot a panel.html con postMessage
+  setTimeout(() => {
+    try {
+      ref.postMessage(snapshot, "*");
+    } catch {}
+  }, 400);
+}
+
+/**
+ * Escucha mensajes entrantes desde panel.html.
+ * - Si el mensaje indidca tipo 'borrado', elimina la nota con ese id.
+ * - Actualiza el estado y vuelve a renderizar la lista.
+ * @param {MessageEvent} ev Evento de mensaje recibido por postMessage().
+ * @returns {void}
+ */
+window.addEventListener("message", (ev) => {
+  if (!ev.data || typeof ev.data !== "object") return;
+  if (ev.data.tipo === "BORRADO") {
+    const id = ev.data.id;
+    estado.notas = estado.notas.filter((n) => n.id !== id);
+    render();
+  }
+});
+
+//7. UTILIDADES
 
 /**
  * Muestra un mensaje visual temporal en la esquina inferior derecha.
@@ -468,4 +479,19 @@ function mostrarMensaje(texto, tipo = "info") {
   caja.style.backgroundColor = tipo === "error" ? "crimson" : "seagreen";
   caja.style.opacity = "1";
   setTimeout(() => (caja.style.opacity = "0"), 2000);
+}
+
+/**
+ * Previene inyecciones de script o HTML al mostrar texto
+ * @param {string} s Texto a mostrar
+ * @returns {string} Texto seguro para insertar en innerHTML
+ */
+function escapeHtml(s) {
+  return String(s).replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[
+        c
+      ])
+  );
 }

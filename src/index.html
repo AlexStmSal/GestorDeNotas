@@ -39,7 +39,9 @@
 
     <section aria-labelledby="listTitle">
       <h2 id="listTitle">Notas</h2>
-      <div id="listaNotas" role="list" aria-live="polite"></div>
+      <div id="listaNotas" role="list" aria-live="polite">
+        <!-- Contenedor notas dinamicas -->
+      </div>
     </section>
   </main>
 
@@ -47,6 +49,20 @@
     <button id="btnPanelDiario">Abrir Panel Diario</button>
     <button id="btnFullscreen">Pantalla completa</button> <!-- add -->
   </footer>
+
+  <!-- Template de Nota -->
+  <template id="nota-template">
+    <article class="nota">
+      <header>
+        <strong data-campo="texto"></strong>
+        <time data-campo="fecha" datetime=""></time>
+      </header>
+      <footer>
+        <button data-acc="completar">Completar</button>
+        <button data-acc="borrar">Borrar</button>
+      </footer>
+    </article>
+  </template>
 
   <script src="app.js" defer></script>
 </body>
