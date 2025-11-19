@@ -1,5 +1,7 @@
 // DWEC U3 — Gestor de notas PLUS
 
+//1. ESTADO GLOBAL
+
 /** @typedef {{ id:string, texto:string, fecha:string, prioridad:number, completada?:boolean }} Nota */
 
 //Se inicializa el estado global en un objeto
@@ -8,70 +10,83 @@ const estado = {
   filtro: obtenerFiltroDesdeHash(), //Se inicializa leyendo el hash actual con obtenerFiltro...()
 };
 
-//1. INICIACIÓN DEL DOM:
+//2. UTILIDADES
 
 /**
- * Espera a que esté listo (elementos ya creados) y registra eventos de la interfaz.
- * Render muestra el estado inicial.
+ * Previene inyecciones de script o HTML al mostrar texto
+ * @param {string} s Texto a mostrar
+ * @returns {string} Texto seguro para insertar en innerHTML
  */
-document.addEventListener("DOMContentLoaded", () => {
-  document
-    .getElementById("listaNotas")
-    .addEventListener("click", delegarAccionNota);
-
-  //Entra en el nav y selecciona todos los elementos que tengan atributo data-hash
-  document.querySelectorAll("nav [data-hash]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      //Selecciona con el boton y asigna el atributo del boton pulsado
-      location.hash = btn.getAttribute("data-hash");
-    });
-  });
-  //
-  document.getElementById("formNota").addEventListener("submit", onSubmitNota);
-  //Abrir panel diario
-  document
-    .getElementById("btnPanelDiario")
-    .addEventListener("click", abrirPanelDiario);
-  //Pantalla completa
-  document
-    .getElementById("btnFullscreen")
-    .addEventListener("click", alternarPantallaCompleta);
-
-  //La pagina mantiene el ultimo filtro activo si se recarga
-  const filtroGuardado = localStorage.getItem("filtro");
-  if (filtroGuardado) location.hash = filtroGuardado;
-
-  guardarIdioma(); //Guardar idioma en una cookie
-  cargarNotas(); //Cargar notas desde localStorage
-  render();
-});
+function escapeHtml(s) {
+  return String(s).replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[
+        c
+      ])
+  );
+}
 
 /**
- * Actualiza el filtro, lo guarda en localStorage y renderiza las notas segun URL actual
+ * Muestra un mensaje visual temporal en la esquina inferior derecha.
+ *
+ * - Crea el contenedor si no existe.
+ * - Cambia el color según el tipo de mensaje.
+ * - Se desvanece automáticamente tras unos segundos.
+ *
+ * @param {string} texto - Texto del mensaje que se mostrará al usuario.
+ * @param {"info"|"ok"|"error"} [tipo="info"] - Tipo de mensaje:
+ *   - `"ok"` → Verde (éxito)
+ *   - `"error"` → Rojo (error)
+ *   - `"info"` → Verde por defecto
+ *
+ * @example
+ * mostrarMensaje("Nota creada correctamente", "ok");
+ * mostrarMensaje("Error al crear la nota", "error");
  */
-window.addEventListener("hashchange", () => {
-  estado.filtro = obtenerFiltroDesdeHash();
-  localStorage.setItem("filtro", estado.filtro);
-  render();
-});
-
-//2. GESTIÓN DE NOTAS (CRUD)
+function mostrarMensaje(texto, tipo = "info") {
+  let caja = document.getElementById("mensaje");
+  if (!caja) {
+    caja = document.createElement("div");
+    caja.id = "mensaje";
+    caja.style.position = "fixed";
+    caja.style.bottom = "10px";
+    caja.style.right = "10px";
+    caja.style.padding = "10px 15px";
+    caja.style.borderRadius = "8px";
+    caja.style.color = "white";
+    caja.style.fontWeight = "bold";
+    caja.style.transition = "opacity 0.5s";
+    document.body.appendChild(caja);
+  }
+  caja.textContent = texto;
+  caja.style.backgroundColor = tipo === "error" ? "crimson" : "seagreen";
+  caja.style.opacity = "1";
+  setTimeout(() => (caja.style.opacity = "0"), 2000);
+}
 
 /**
- * Crea una nota a partir del texto, una fecha y una prioridad.
- * @param {string} texto Texto de la nota. Se recorta con trim() y se valida que no este vacio.
- * @param {Date} fecha  Fecha asociada. Se convierte en obj Date y luego a formato ISO(yyyy-mm-dd).
- * @param {number} prioridad Nivel de prioridad(1=baja, 2=media, 3=alta). Se normaliza rango 1-3.
- * @returns {Nota} Nuevo obj Nota con ID unico, texto, fecha y prioridad validos.
- * @throws {Error} Si el texto esta vacio o la fecha no es valida.
+ * Guarda el idioma del navegador en una cookie por 30 dias
  */
-function crearNota(texto, fecha, prioridad) {
-  const t = String(texto).trim(); //Texto
-  const f = new Date(fecha); //Fecha
-  const p = Math.max(1, Math.min(3, Number(prioridad) || 1)); //Prioridad
-  if (!t || Number.isNaN(f.getTime()))
-    throw new Error("Datos de nota inválidos");
+function guardarIdioma(dias = 30) {
+  const fecha = new Date();
+  fecha.setTime(fecha.getTime() + dias * 24 * 60 * 60 * 1000);
+  document.cookie = `idioma=${encodeURIComponent(
+    navigator.language
+  )}; expires=${fecha.toUTCString()}; path=/`;
+}
 
+/**
+ * Comprueba que la fecha sea válida
+ * - El año no debe superar los 4 dígitos
+ * - El año no debe ser menor que el año actual
+ * - El año no debe superar los 2 próximos años desde el actual
+ * - El día y el mes no puede ser abterior al día actual
+ * @param {Date} fecha - fecha actual
+ * @return {boolean} - devuelve true si cumple todos los requisitos
+ */
+function validarFecha(fecha) {
+  const f = new Date(fecha);
   const anio = f.getFullYear();
   const anioActual = new Date().getFullYear();
 
@@ -97,14 +112,10 @@ function crearNota(texto, fecha, prioridad) {
     throw new Error("La fecha no puede ser anterior a hoy");
   }
 
-  //Objeto Nota
-  return {
-    id: "n" + Math.random().toString(36).slice(2),
-    texto: t,
-    fecha: f.toISOString().slice(0, 10),
-    prioridad: p,
-  };
+  return true;
 }
+
+//3. FILTROS, ORDENACIÓN Y FORMATEOS
 
 /**
  * @returns Solo 3 valores permitidos (hoy, semana, todas). Si no usa #todas por defecto
@@ -174,6 +185,37 @@ function formatearFecha(ymd) {
   }).format(d);
 }
 
+//4. CRUD DE NOTAS (crear, editar, borrar)
+
+/**
+ * Crea una nota a partir del texto, una fecha y una prioridad.
+ * @param {string} texto Texto de la nota. Se recorta con trim() y se valida que no este vacio.
+ * @param {Date} fecha  Fecha asociada. Se convierte en obj Date y luego a formato ISO(yyyy-mm-dd).
+ * @param {number} prioridad Nivel de prioridad(1=baja, 2=media, 3=alta). Se normaliza rango 1-3.
+ * @returns {Nota} Nuevo obj Nota con ID unico, texto, fecha y prioridad validos.
+ * @throws {Error} Si el texto esta vacio o la fecha no es valida.
+ */
+function crearNota(texto, fecha, prioridad) {
+  const t = String(texto).trim(); //Texto
+  const f = new Date(fecha); //Fecha
+  const p = Math.max(1, Math.min(3, Number(prioridad) || 1)); //Prioridad
+
+  //Validacion básica
+  if (!t || Number.isNaN(f.getTime()))
+    throw new Error("Datos de nota inválidos");
+
+  //Validacion de fecha usando funcion auxiliar
+  validarFecha(fecha);
+
+  //Objeto Nota
+  return {
+    id: "n" + Math.random().toString(36).slice(2),
+    texto: t,
+    fecha: f.toISOString().slice(0, 10),
+    prioridad: p,
+  };
+}
+
 /**
  * Controlador del evento de envio del form de notas.
  *  - Previene la recarga por defecto.
@@ -205,12 +247,17 @@ function onSubmitNota(e) {
   }
 }
 
+//5. DELEGACIÓN DE EVENTOS (completar, borrar, editar, guardar y cancelar)
+
 /**
  *Controla las acciones de cada nota (borrar, completar, marcar, desmarcar).
  * - Identifica la nota mediante data-acc.
  * - Si la accion es borrar, solicita confirmacion y la elimina.
  * - Si es completar, marca la nota como completada.
  * - Puede marcarse y desmarcarse.
+ * - Si es editar, llama a la funcion iniciarEdicion()
+ * - (En modo edición) Si es guardar, llama a la funcion guardarEdicion()
+ * - (En modo edición) Si es cancelar, llama a la funcion cancelarEdicion()
  * - Siempre vuelve a renderizar la vista actual.
  * @param {click} e Evento click en un boton de accion
  */
@@ -220,6 +267,7 @@ function delegarAccionNota(e) {
     return;
   }
 
+  //Seleccionarmos la accion y el id a traves de data-*
   const acc = btn.dataset.acc;
   const id = btn.dataset.id;
 
@@ -242,6 +290,10 @@ function delegarAccionNota(e) {
     estado.notas[idx].completada = false;
     mostrarMensaje("Nota desmarcada", "info");
   }
+  //Dependiendo de la accion, ejecuta su funcion correspondiente
+  if (acc === "editar") return iniciarEdicion(id, btn);
+  if (acc === "guardar") return guardarEdicion(id, btn);
+  if (acc === "cancelar") return cancelarEdicion(id, btn);
 
   //Guardar en localStorage
   guardarNotas();
@@ -249,7 +301,96 @@ function delegarAccionNota(e) {
   render();
 }
 
-//3. PERSISTENCIA LOCAL
+//6. EDICIÓN INLINE
+
+/**
+ * Entra en el modo edición del recordatorio
+ * Diseño inline("full inline replacement")
+ */
+function iniciarEdicion(id, btn) {
+  const notaEd = btn.closest(".nota");
+  if (!notaEd) return;
+  notaEd.classList.add("editando");
+
+  //Obtener nota desde estado
+  const nota = estado.notas.find((n) => n.id === id);
+  if (!nota) return;
+
+  //Crear inputs
+  notaEd.innerHTML = `
+  <label>
+      <input class="edit-txt" required maxlength="200" value="${escapeHtml(
+        nota.texto
+      )}">
+    </label>
+    <label>
+      <input class="edit-fecha" type="date" required value="${nota.fecha}">
+    </label>
+    <label>
+      <select class="edit-prio">
+        <option value="1"${nota.prioridad == 1 ? " selected" : ""}>Baja</option>
+        <option value="2"${
+          nota.prioridad == 2 ? " selected" : ""
+        }>Media</option>
+        <option value="3"${nota.prioridad == 3 ? " selected" : ""}>Alta</option>
+      </select>
+    </label>
+    <div>
+      <button data-acc="guardar" data-id="${id}">Guardar</button>
+      <button data-acc="cancelar" data-id="${id}">Cancelar</button>
+    </div>`;
+
+  notaEd.querySelector(".edit-txt").focus();
+}
+/**
+ * Guarda los cambios realizados en el modo edicion
+ * @param
+ */
+function guardarEdicion(id, btn) {
+  const notaEl = btn.closest(".nota");
+  const txt = notaEl.querySelector(".edit-txt");
+  const fecha = notaEl.querySelector(".edit-fecha");
+  const prio = notaEl.querySelector(".edit-prio");
+
+  if (!txt.checkValidity()) {
+    txt.setAttribute("aria-invalid", "true");
+    txt.reportValidity();
+    return;
+  } else {
+    txt.removeAttribute("aria-invalid");
+  }
+
+  try {
+    validarFecha(fecha.value);
+  } catch (err) {
+    fecha.setAttribute("aria-invalid", "true");
+    fecha.reportValidity();
+    alert(err.message);
+    return;
+  }
+  fecha.removeAttribute("aria-invalid");
+
+  //Actualizar estado
+  const idx = estado.notas.findIndex((n) => n.id === id);
+  if (idx < 0) return;
+
+  estado.notas[idx].texto = txt.value.trim();
+  estado.notas[idx].fecha = fecha.value;
+  estado.notas[idx].prioridad = Number(prio.value);
+
+  //Guardar y render
+  guardarNotas();
+  mostrarMensaje("Nota actualizada", "ok");
+  render();
+}
+/**
+ * Devuelve la nota sin realizar ningun cambio
+ */
+function cancelarEdicion(id, btn) {
+  render();
+}
+
+//7. PERSISTENCIA localstorage
 
 /**
  * Guarda el estado actual de las notas en localStorage.
@@ -284,17 +425,6 @@ function cargarNotas() {
 }
 
 /**
- * Guarda el idioma del navegador en una cookie por 30 dias
- */
-function guardarIdioma(dias = 30) {
-  const fecha = new Date();
-  fecha.setTime(fecha.getTime() + dias * 24 * 60 * 60 * 1000);
-  document.cookie = `idioma=${encodeURIComponent(
-    navigator.language
-  )}; expires=${fecha.toUTCString()}; path=/`;
-}
-
-/**
  * Elimima todas las notas guardadas, cambia el arr notas a uno vacio y renderiza nueva vista.
  * @returns {void}
  */
@@ -306,11 +436,11 @@ function limpiarDatos() {
   }
 }
 
-//Evento limpiarDatos
-document.getElementById("btnLimpiar").addEventListener("click", limpiarDatos);
+//8. RENDER (con template + fragment)
 
-//4. RENDERIZADO
-
+/**
+ *
+ */
 function render() {
   const cont = document.getElementById("listaNotas"); //Recoge el contenedor principal
   cont.innerHTML = ""; //Limpia el contenido previo
@@ -357,15 +487,20 @@ function render() {
     const btnBorrar = card.querySelector('[data-acc="borrar"]');
     btnBorrar.dataset.id = n.id;
 
+    //BTN EDITAR
+    const btnEditar = card.querySelector('[data-acc="editar"]');
+    if (btnEditar) btnEditar.dataset.id = n.id;
+
     fragment.appendChild(clone); //Insertar clone al fragment
   }
   //Insertar fragmento al DOM real
   cont.appendChild(fragment);
 }
 
-//5. EVENTOS DE PANTALLA
+//9. EVENTOS DE PANTALLA
+
 /**
- *
+ * Alterna mediante un boton a pantall completa
  */
 function alternarPantallaCompleta() {
   if (!document.fullscreenElement) {
@@ -392,13 +527,8 @@ function mostrarTamanoViewport() {
   console.log(`Viewport actual: ${ancho}x${alto}`);
 }
 window.addEventListener("resize", mostrarTamanoViewport);
-window.addEventListener("hashchange", () => {
-  //add
-  estado.filtro = obtenerFiltroDesdeHash();
-  render();
-});
 
-//6. COMUNICACIÓN ENTRE VENTANAS
+//10. COMUNICACIÓN ENTRE VENTANAS
 
 /**
  * Abre una ventana secundaria (panel diario) y le envia las notas actuales.
@@ -441,57 +571,82 @@ window.addEventListener("message", (ev) => {
   }
 });
 
-//7. UTILIDADES
+//11. INICIALIZACIÓN
 
 /**
- * Muestra un mensaje visual temporal en la esquina inferior derecha.
- *
- * - Crea el contenedor si no existe.
- * - Cambia el color según el tipo de mensaje.
- * - Se desvanece automáticamente tras unos segundos.
- *
- * @param {string} texto - Texto del mensaje que se mostrará al usuario.
- * @param {"info"|"ok"|"error"} [tipo="info"] - Tipo de mensaje:
- *   - `"ok"` → Verde (éxito)
- *   - `"error"` → Rojo (error)
- *   - `"info"` → Verde por defecto
- *
- * @example
- * mostrarMensaje("Nota creada correctamente", "ok");
- * mostrarMensaje("Error al crear la nota", "error");
+ * Espera a que esté listo (elementos ya creados) y registra eventos de la interfaz.
+ * Render muestra el estado inicial.
  */
-function mostrarMensaje(texto, tipo = "info") {
-  let caja = document.getElementById("mensaje");
-  if (!caja) {
-    caja = document.createElement("div");
-    caja.id = "mensaje";
-    caja.style.position = "fixed";
-    caja.style.bottom = "10px";
-    caja.style.right = "10px";
-    caja.style.padding = "10px 15px";
-    caja.style.borderRadius = "8px";
-    caja.style.color = "white";
-    caja.style.fontWeight = "bold";
-    caja.style.transition = "opacity 0.5s";
-    document.body.appendChild(caja);
-  }
-  caja.textContent = texto;
-  caja.style.backgroundColor = tipo === "error" ? "crimson" : "seagreen";
-  caja.style.opacity = "1";
-  setTimeout(() => (caja.style.opacity = "0"), 2000);
-}
+document.addEventListener("DOMContentLoaded", () => {
+  document
+    .getElementById("listaNotas")
+    .addEventListener("click", delegarAccionNota);
 
-/**
- * Previene inyecciones de script o HTML al mostrar texto
- * @param {string} s Texto a mostrar
- * @returns {string} Texto seguro para insertar en innerHTML
- */
-function escapeHtml(s) {
-  return String(s).replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[
-        c
-      ])
+  //Evento limpiarDatos
+  document.getElementById("btnLimpiar").addEventListener("click", limpiarDatos);
+
+  //Entra en el nav y selecciona todos los elementos que tengan atributo data-hash
+  document.querySelectorAll("nav [data-hash]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      //Selecciona con el boton y asigna el atributo del boton pulsado
+      location.hash = btn.getAttribute("data-hash");
+    });
+  });
+
+  //Evento de formulario nota
+  document.getElementById("formNota").addEventListener("submit", onSubmitNota);
+
+  //Abrir panel diario
+  document
+    .getElementById("btnPanelDiario")
+    .addEventListener("click", abrirPanelDiario);
+
+  //Pantalla completa
+  document
+    .getElementById("btnFullscreen")
+    .addEventListener("click", alternarPantallaCompleta);
+
+  //Tema pagina
+  document.getElementById("btnTema")?.addEventListener("click", () => {
+    const actual = document.body.dataset.tema === "oscuro" ? "claro" : "oscuro";
+    document.body.dataset.tema = actual;
+    document.cookie = `tema=${actual}; path=/; max-age=${60 * 60 * 24 * 30}`;
+    mostrarMensaje("Tema cambiado", "info");
+  });
+
+  //La pagina mantiene el ultimo filtro activo si se recarga
+  const filtroGuardado = localStorage.getItem("filtro");
+  if (filtroGuardado) location.hash = filtroGuardado;
+
+  //Si el usuario recarga no pierede lo escrito en el formulario
+  const txt = document.getElementById("txtTexto");
+  const fecha = document.getElementById("txtFecha");
+  const prio = document.getElementById("selPrioridad");
+
+  txt.value = sessionStorage.getItem("tmpTexto") || "";
+  fecha.value = sessionStorage.getItem("tmpFecha") || "";
+  prio.value = sessionStorage.getItem("tmpPrio") || "1";
+
+  //Guardar en input events lo que el usuario escribe en el formulario
+  txt.addEventListener("input", () =>
+    sessionStorage.setItem("tmpTexto", txt.value)
   );
-}
+  fecha.addEventListener("input", () =>
+    sessionStorage.setItem("tmpFecha", fecha.value)
+  );
+  prio.addEventListener("change", () =>
+    sessionStorage.setItem("tmpPrio", prio.value)
+  );
+
+  guardarIdioma(); //Guardar idioma en una cookie
+  cargarNotas(); //Cargar notas desde localStorage
+  render();
+});
+
+//Evento para actualizar filtro, guardar en local y session, renderiza
+window.addEventListener("hashchange", () => {
+  estado.filtro = obtenerFiltroDesdeHash();
+  localStorage.setItem("filtro", estado.filtro);
+  sessionStorage.setItem("filtroActivo", estado.filtro);
+  render();
+});
