@@ -2,7 +2,14 @@
 
 //1. ESTADO GLOBAL
 
-/** @typedef {{ id:string, texto:string, fecha:string, prioridad:number, completada?:boolean }} Nota */
+/**
+ * @typedef {Object} Nota
+ * @property {string} id
+ * @property {string} texto
+ * @property {string} fecha  - Formato YYYY-MM-DD
+ * @property {number} prioridad - 1=baja, 2=media, 3=alta
+ * @property {boolean} [completada] - Opcional
+ */
 
 //Se inicializa el estado global en un objeto
 const estado = {
@@ -382,8 +389,10 @@ function guardarEdicion(id, btn) {
   mostrarMensaje("Nota actualizada", "ok");
   render();
 }
+
 /**
  * Devuelve la nota sin realizar ningun cambio
+ * @returns {void}
  */
 function cancelarEdicion(id, btn) {
   render();
@@ -651,6 +660,7 @@ document.addEventListener("DOMContentLoaded", () => {
       cargarListaSnapshots();
     });
 
+  //Delegación de eventos en #listaNotas
   document
     .getElementById("listaNotas")
     .addEventListener("click", delegarAccionNota);
