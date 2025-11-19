@@ -236,7 +236,6 @@ function onSubmitNota(e) {
     estado.notas.push(nota); //Agrega notas al estado global
     guardarNotas(); //Guardamos en localStorage
     e.target.reset(); //limpia el form
-    mostrarMensaje("Nota creada correctamente", "ok");
     render(); //Actualiar lista
     // Desplazar al área de notas
     document.getElementById("listTitle").scrollIntoView({ behavior: "smooth" });
@@ -390,20 +389,78 @@ function cancelarEdicion(id, btn) {
   render();
 }
 
-//7. PERSISTENCIA localstorage
+//7. PERSISTENCIA local/session
 
 /**
  * Guarda el estado actual de las notas en localStorage.
- * Convierte el array de obj a JSON antes de almacenarlo.
+ * Guarda snapshot
  * @returns {void}
  */
 function guardarNotas() {
   try {
+    //Localstorage
     const datos = JSON.stringify(estado.notas);
-    localStorage.setItem("notas", datos); //Conversion a json
+    localStorage.setItem("notasApp:data", datos);
+    //Snapshot
+    guardarSnapshot();
   } catch (err) {
     console.error("Error al guardar notas: ", err);
   }
+}
+
+/**
+ * Guardar snapshot con formateo. Máx 5.
+ */
+function guardarSnapshot() {
+  const ts = new Date().toISOString(); //timestamp
+
+  localStorage.setItem(`notasApp:hist:${ts}`, JSON.stringify(estado.notas));
+
+  const claves = Object.keys(localStorage)
+    .filter((k) => k.startsWith("notasApp:hist:"))
+    .sort()
+    .reverse(); //Nuevas primero
+
+  claves.slice(5).forEach((k) => localStorage.removeItem(k));
+}
+
+/**
+ * Restaura desde localstorage
+ * @param {*} ts Timestamp
+ * @returns
+ */
+function restaurarSnapshot(ts) {
+  const datos = JSON.parse(localStorage.getItem(`notasApp:hist:${ts}`));
+  if (!datos) {
+    alert("No existe ese snapshot");
+    return;
+  }
+  //Actualizamos el estado global y la vista
+  estado.notas = datos;
+  guardarNotas();
+  render();
+}
+
+/**
+ * Carga en DOM la lista de los snapshot almacenados.
+ */
+function cargarListaSnapshots() {
+  const sel = document.getElementById("selSnapshots");
+  if (!sel) return;
+
+  sel.innerHTML = "";
+
+  const claves = Object.keys(localStorage)
+    .filter((k) => k.startsWith("notasApp:hist:"))
+    .sort()
+    .reverse();
+
+  claves.forEach((k) => {
+    const opt = document.createElement("option");
+    opt.value = k.replace("notasApp:hist:", "");
+    opt.textContent = opt.value;
+    sel.appendChild(opt);
+  });
 }
 
 /**
@@ -414,7 +471,7 @@ function guardarNotas() {
  */
 function cargarNotas() {
   try {
-    const datos = localStorage.getItem("notas");
+    const datos = localStorage.getItem("notasApp:data");
     if (datos) {
       estado.notas = JSON.parse(datos);
     }
@@ -430,7 +487,7 @@ function cargarNotas() {
  */
 function limpiarDatos() {
   if (confirm("¿Eliminar todas las notas guardadas?")) {
-    localStorage.removeItem("notas");
+    localStorage.removeItem("notasApp:data");
     estado.notas = [];
     render();
   }
@@ -578,6 +635,22 @@ window.addEventListener("message", (ev) => {
  * Render muestra el estado inicial.
  */
 document.addEventListener("DOMContentLoaded", () => {
+  // Cargar lista de snapshots
+  cargarListaSnapshots();
+
+  // Restaurar snapshot
+  document
+    .getElementById("btnRestaurarSnapshot")
+    ?.addEventListener("click", () => {
+      const sel = document.getElementById("selSnapshots");
+      if (!sel.value) {
+        alert("Selecciona una snapshot");
+        return;
+      }
+      restaurarSnapshot(sel.value);
+      cargarListaSnapshots();
+    });
+
   document
     .getElementById("listaNotas")
     .addEventListener("click", delegarAccionNota);

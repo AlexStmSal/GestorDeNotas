@@ -1,4 +1,4 @@
-# NotasApp — DWEC U3 
+# NotasApp — DWEC U3
 
 **Objetivo**: implementar los RF acordados (objetos nativos; `navigator.language`; filtros por `location.hash`; generación de HTML; viewport/scroll/pantalla completa cuando proceda; `window.open`+comunicación controlada; persistencia elegida y justificada; depuración/documentación).
 
@@ -10,7 +10,7 @@
 
 ## Justificación de persistencia
 
-- Mecanismo elegido: Cookies ✔ / Web Storage - LocalStorage ✔
+- Mecanismo elegido: Cookies ✔ / Web Storage - Local y Session ✔
 - Motivo: Cookies para datos sencillos como el idioma del navegador. Con una expiración de 30 días.
   LocalStorage para guardar notas, convertidas previamente en JSON.
 
@@ -19,6 +19,6 @@
 - Objetos nativos → Math, String, Date, Number, Array
 - Interacción navegador (`navigator`, `location.hash`) → Con navigator, window y filtros de hash por URL.
 - Persistencia → LocalStorage para almacenar datos en JSON y cookies para almacenamiento de datos simples.
-- Depuración y documentación → Trello para la organización, GitHub para el repositorio, chatGpt para documentación.
+- Depuración y documentación → Trello para la organización, GitHub para el repositorio, chatGpt para documentación (bajo supervisión).
 
-© 2025-10-27 — DWEC
+© 2025-11-19 — DWEC

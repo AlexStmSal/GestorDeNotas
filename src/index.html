@@ -10,6 +10,7 @@
 
 <body>
   <header>
+    <button id="btnTema">Tema</button>
     <h1>NotasApp</h1>
     <nav aria-label="Filtros">
       <button data-hash="#hoy">Hoy</button>
@@ -43,11 +44,23 @@
         <!-- Contenedor notas dinamicas -->
       </div>
     </section>
+
+    <!-- Contenedor para histórico de snapshots -->
+    <section aria-labelledby="snapTitle">
+      <h2 id="snapTitle">Historial (Snapshots)</h2>
+
+      <label for="selSnapshots">Versiones guardadas:</label>
+      <select id="selSnapshots">
+        <!-- Se rellenará dinámicamente -->
+      </select>
+
+      <button id="btnRestaurarSnapshot">Restaurar Snapshot</button>
+    </section>
   </main>
 
   <footer>
     <button id="btnPanelDiario">Abrir Panel Diario</button>
-    <button id="btnFullscreen">Pantalla completa</button> <!-- add -->
+    <button id="btnFullscreen">Pantalla completa</button>
   </footer>
 
   <!-- Template de Nota -->
@@ -58,6 +71,7 @@
         <time data-campo="fecha" datetime=""></time>
       </header>
       <footer>
+        <button data-acc="editar">Editar</button>
         <button data-acc="completar">Completar</button>
         <button data-acc="borrar">Borrar</button>
       </footer>

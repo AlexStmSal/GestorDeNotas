@@ -1,16 +1,75 @@
-:root { --font: system-ui, sans-serif; }
-* { box-sizing: border-box; }
-body { font-family: var(--font); margin: 0; line-height: 1.5; }
-header, footer { padding: 1rem; background: #f2f2f2; }
-main { padding: 1rem; }
-nav button { margin-right: .5rem; }
-#listaNotas { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
-.nota { border: 1px solid #ddd; border-radius: 8px; padding: .75rem; }
-.nota header { display: flex; justify-content: space-between; align-items: center; }
+:root {
+  --font: system-ui, sans-serif;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  font-family: var(--font);
+  margin: 0;
+  line-height: 1.5;
+}
+header,
+footer {
+  padding: 1rem;
+  background: #f2f2f2;
+}
+main {
+  padding: 1rem;
+}
+nav button {
+  margin-right: 0.5rem;
+}
+#listaNotas {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.nota {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+.nota header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 /* Colores según prioridad */
-.nota.prioridad-1 { border-left: 5px solid green; }
-.nota.prioridad-2 { border-left: 5px solid orange; }
-.nota.prioridad-3 { border-left: 5px solid red; }
+.nota.prioridad-1 {
+  border-left: 5px solid green;
+}
+.nota.prioridad-2 {
+  border-left: 5px solid orange;
+}
+.nota.prioridad-3 {
+  border-left: 5px solid red;
+}
+
+/* Boton tema oscuro/claro */
+#btnTema {
+  background-color: #8e8e8f;
+  border-color: #a6a6a6;
+  color: #ffffff;
+}
+/* Tema oscuro */
+body[data-tema="oscuro"] {
+  background-color: #333;
+  color: #ddd;
+}
+
+body[data-tema="oscuro"] header,
+body[data-tema="oscuro"] footer {
+  background-color: rgb(43, 43, 43);
+}
+
+body[data-tema="oscuro"] .nota {
+  background-color: #2f2f2f;
+}
+
+body[data-tema="oscuro"] .nota.completada {
+  opacity: 0.5;
+}
 
 /* Notas completadas */
 .nota.completada {
@@ -22,6 +81,20 @@ nav button { margin-right: .5rem; }
   opacity: 0.6;
   text-decoration: line-through;
   transition: opacity 0.3s ease;
+}
+/* Modo edición activa */
+.nota.editando {
+  background: #863c897b;
+  border-color: rgba(143, 143, 143, 0.69);
+}
+
+.nota.editando input,
+.nota.editando select {
+  width: 100%;
+  margin: 0.25rem 0;
+  padding: 0.4rem;
+  border-radius: 6px;
+  border: 1px solid #f2f2f2;
 }
 
 #mensaje {
@@ -40,7 +113,9 @@ nav button { margin-right: .5rem; }
 }
 
 /* Cuando hay error, el color cambia dinámicamente desde JS */
-#mensaje.error { background-color: crimson; }
+#mensaje.error {
+  background-color: crimson;
+}
 
 #btnFullscreen {
   margin-left: 10px;
