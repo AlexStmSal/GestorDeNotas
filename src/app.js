@@ -142,7 +142,14 @@ function obtenerFiltroDesdeHash() {
  */
 function filtrarNotas(notas) {
   const hoy = new Date(); //Fecha actual
-  const ymd = hoy.toISOString().slice(0, 10); //Formato YYYY-MM-DD. Recorta hora.
+  /* const ymd = hoy.toISOString().slice(0, 10); //Formato YYYY-MM-DD. Recorta hora. */
+
+  //Error. Guardaba hora en formato local, pero los filtros usan UTC
+  const ymd = [
+    hoy.getFullYear(),
+    String(hoy.getMonth() + 1).padStart(2, "0"),
+    String(hoy.getDate()).padStart(2, "0"),
+  ].join("-");
 
   //Filtro 1: solo las fechas de hoy
   if (estado.filtro === "#hoy") return notas.filter((n) => n.fecha === ymd);
@@ -611,6 +618,8 @@ function abrirPanelDiario() {
     alert("Pop-up bloqueado. Permita ventanas emergentes.");
     return;
   }
+  //Actualizar el filtro antes
+  estado.filtro = obtenerFiltroDesdeHash();
   //Crea una "instantánea" del estado actual de las notas (objeto con tipo y datos)
   const snapshot = { tipo: "SNAPSHOT", notas: filtrarNotas(estado.notas) };
   //Despues de un retardo de 400ms, envia la snapshot a panel.html con postMessage
